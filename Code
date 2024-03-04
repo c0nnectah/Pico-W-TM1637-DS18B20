@@ -1,0 +1,68 @@
+### This setup is for Raspberry Pico W, TM1637 segment display and DS18B20 sensor.
+### Output on Tm1637 and console in celsius. Enjoy!
+
+import machine
+from machine import Pin
+import onewire
+import ds18x20
+from tm1637 import TM1637
+import utime
+
+
+# DS18B20 sensor
+ow = onewire.OneWire(machine.Pin(28)) # Define your Pin for onewire.
+ds_sensor = ds18x20.DS18X20(ow)
+roms = ds_sensor.scan()
+
+# TM1637 display
+tm = TM1637(clk=machine.Pin(0), dio=machine.Pin(1))  # Define CLK and DIO pins for TM1637 display.
+tm.brightness(2)
+tm.show("    ")
+utime.sleep(1)
+tm.write([0b0000000, 0b0000000, 0b0111001, 0b1100011])
+utime.sleep(2)
+
+# Pico W onboard led
+led = machine.Pin("LED", machine.Pin.OUT)
+led.on()
+utime.sleep(2)
+led.off()
+
+
+# Function to read temperature from DS18B20
+def read_temperature():
+    ds_sensor.convert_temp()
+    utime.sleep(2)  # Minimum 750ms
+    
+    # Read temperature from DS18B20
+    return round(ds_sensor.read_temp(roms[0]))  # Assuming you have only one sensor
+
+# Function to display temperature on TM1637
+def display_temperature(temp):
+    # Convert temperature to string without decimal point
+    temp_str = "{:2d}".format(int(temp))  # Display temperature as integer without decimal point
+    # Determine the length of the temperature string
+    temp_length = len(temp_str)
+    # If the length is less than 3, pad the string with spaces on the left
+    if temp_length < 3:
+        temp_str = " " * (3 - temp_length) + temp_str
+    # Display temperature on TM1637 display
+    tm.show(temp_str)
+    # Display specific pattern in the fourth segment
+    tm.write([0b1100011], 3)  # Display the pattern in the fourth segment
+    
+    # Print temperature to console
+    print("Temperature:", temp)
+
+# Main loop:
+while True:
+    try:
+        # Read temperature
+        temperature = read_temperature()
+        # Display temperature on TM1637
+        display_temperature(temperature)
+    except Exception as e:
+        print("Error:", e)
+    utime.sleep(2)
+    
+# end
