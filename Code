@@ -1,5 +1,9 @@
 ### This setup is for Raspberry Pico W, TM1637 segment display and DS18B20 sensor.
-### Output on Tm1637 and console in celsius. Enjoy!
+### Output on Tm1637 and console in celsius.
+
+### update 26/08/2024.
+# -Added WDT for automatic reboot.
+# -Led blinks during loop.
 
 import machine
 from machine import Pin
@@ -7,7 +11,15 @@ import onewire
 import ds18x20
 from tm1637 import TM1637
 import utime
+from machine import WDT
 
+# Pico W onboard led
+led = machine.Pin(25, Pin.OUT)
+led.on()
+print("led on")
+utime.sleep(2)
+led.off()
+print("led off")
 
 # DS18B20 sensor
 ow = onewire.OneWire(machine.Pin(28)) # Define your Pin for onewire.
@@ -15,18 +27,12 @@ ds_sensor = ds18x20.DS18X20(ow)
 roms = ds_sensor.scan()
 
 # TM1637 display
-tm = TM1637(clk=machine.Pin(0), dio=machine.Pin(1))  # Define CLK and DIO pins for TM1637 display.
+tm = TM1637(clk=machine.Pin(1), dio=machine.Pin(0))  # Define CLK and DIO pins for TM1637 display.
 tm.brightness(2)
 tm.show("    ")
 utime.sleep(1)
-tm.write([0b0000000, 0b0000000, 0b0111001, 0b1100011])
+tm.write([0b1000000, 0b1000000, 0b1000000, 0b1000000])
 utime.sleep(2)
-
-# Pico W onboard led
-led = machine.Pin("LED", machine.Pin.OUT)
-led.on()
-utime.sleep(2)
-led.off()
 
 
 # Function to read temperature from DS18B20
@@ -53,6 +59,9 @@ def display_temperature(temp):
     
     # Print temperature to console
     print("Temperature:", temp)
+    
+#wdt = WDT(timeout=6000)
+#wdt.feed()
 
 # Main loop:
 while True:
@@ -61,8 +70,13 @@ while True:
         temperature = read_temperature()
         # Display temperature on TM1637
         display_temperature(temperature)
+        #wdt.feed()
+        #print("wdt feed")
+        led.on()
+        utime.sleep(0.1)
+        led.off()
     except Exception as e:
         print("Error:", e)
-    utime.sleep(2)
+    utime.sleep(1)
     
 # end
